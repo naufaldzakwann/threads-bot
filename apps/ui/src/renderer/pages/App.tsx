@@ -1,11 +1,11 @@
 import React from 'react';
-import { Button, ConfigProvider, Input, Layout, Menu, message, theme } from 'antd';
+import { Button, ConfigProvider, Input, Layout, Menu, message } from 'antd';
 import {
   AimOutlined, ApiOutlined, DashboardOutlined, ExperimentOutlined, MessageOutlined,
   RocketOutlined, SendOutlined, SettingOutlined, TeamOutlined, ThunderboltOutlined,
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
-import { autoConnect, connectWS, coreBase, coreToken, setConnection } from '../api/client';
+import { autoConnect, connectWS, setConnection } from '../api/client';
 import { thbTheme } from '../theme';
 import Dashboard from './Dashboard';
 import Accounts from './Accounts';
@@ -38,12 +38,12 @@ export default function App() {
   const [page, setPage] = React.useState<string>('dashboard');
   const [agreed, setAgreed] = React.useState(false);
   const [base, setBase] = React.useState(localStorage.getItem('thb.base') || 'http://127.0.0.1:8899');
-  const [token, setToken] = React.useState(coreToken());
+  const [token, setToken] = React.useState(localStorage.getItem('thb.token') || '');
   const [connected, setConnected] = React.useState<'probing' | 'online' | 'manual'>('probing');
   const [feed, setFeed] = React.useState<Ev[]>([]);
 
-  // Auto-connect saat boot + probe ulang tiap 10 dtk bila belum online
-  // (backend restart → port/token baru → pulih sendiri tanpa klik apa pun)
+  // Auto-connect on boot + re-probe every 10s while offline
+  // (backend restart → new port/token → recovers by itself, no clicks needed)
   const connectedRef = React.useRef(connected);
   connectedRef.current = connected;
   React.useEffect(() => {
@@ -56,7 +56,7 @@ export default function App() {
         setToken(tok);
         if (connectedRef.current !== 'online') {
           setConnected('online');
-          if (!silent) message.success(`Tersambung ke core ${b}`);
+          if (!silent) message.success(`Connected to core ${b}`);
         }
       } else if (!silent) {
         setConnected('manual');
@@ -81,7 +81,7 @@ export default function App() {
   const save = () => {
     setConnection(base, token);
     setConnected('online');
-    message.success('koneksi disimpan');
+    message.success('Connection saved');
   };
 
   return (
@@ -96,7 +96,7 @@ export default function App() {
             items={NAV.map((n) => ({ key: n.key, icon: n.icon, label: t(`nav.${n.key}`) }))} />
           <div style={{ padding: 18, marginTop: 8, color: '#64748b', fontSize: 11 }} className="mono">
             {connected === 'online' ? <span><span className="live-dot" /> core online</span>
-              : connected === 'probing' ? 'menghubungi core…' : 'mode manual — isi koneksi'}
+              : connected === 'probing' ? 'contacting core…' : 'manual mode — enter connection'}
           </div>
         </Layout.Sider>
         <Layout style={{ padding: 16, background: 'transparent' }}>
@@ -104,14 +104,14 @@ export default function App() {
             <span className={connected === 'online' ? 'live-dot' : undefined}
               style={connected === 'online' ? undefined : { display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: '#f59e0b' }} />
             <Input value={base} onChange={(e) => setBase(e.target.value)} style={{ width: 230 }} className="mono" aria-label="Core base URL" />
-            <Input.Password value={token} onChange={(e) => setToken(e.target.value)} placeholder="Bearer token" style={{ maxWidth: 380 }} className="mono" aria-label="Bearer token" />
-            <Button type="primary" onClick={save}>Sambungkan</Button>
-            <span style={{ color: '#64748b', fontSize: 11 }}>auto via connection.json bila backend jalan</span>
+            <Input.Password value={token} onChange={(e) => setToken(e.target.value)} placeholder="Bearer token (from the THBUZZER_READY log line)" style={{ maxWidth: 380 }} className="mono" aria-label="Bearer token" />
+            <Button type="primary" onClick={save}>Connect</Button>
+            <span style={{ color: '#64748b', fontSize: 11 }}>auto via connection.json while the backend is running</span>
           </div>
           {!agreed && (
             <div className="glass" style={{ padding: 12, marginBottom: 14, borderColor: '#f59e0b' }}>
               <span style={{ fontSize: 12 }}>{t('disclaimer.risk_threads')}</span>
-              <label style={{ marginLeft: 12, fontSize: 12 }}><input type="checkbox" onChange={(e) => setAgreed(e.target.checked)} /> Saya mengerti risikonya</label>
+              <label style={{ marginLeft: 12, fontSize: 12 }}><input type="checkbox" onChange={(e) => setAgreed(e.target.checked)} /> I understand the risks</label>
             </div>
           )}
           <Layout.Content style={{ background: 'transparent' }}>

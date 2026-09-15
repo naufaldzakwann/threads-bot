@@ -1,7 +1,7 @@
 import React from 'react';
 import { Button, Card, Input, Space, Table, Tag, message } from 'antd';
 import { api, notifyError, unwrap } from '../api/client';
-import { StatusTag } from '../components/ui';
+import { PageHeader, Panel, StatusTag, W } from '../components/ui';
 import * as echarts from 'echarts';
 
 export default function Analytics() {
@@ -20,9 +20,11 @@ export default function Analytics() {
   }, []);
   React.useEffect(load, [load]);
 
+  const validAid = /^\d+$/.test(aid.trim()) && parseInt(aid, 10) >= 1;
+
   const loadSeries = async () => {
-    if (!/^\d+$/.test(aid.trim()) || parseInt(aid, 10) < 1) {
-      message.error('Account ID tidak valid: harus angka ≥ 1');
+    if (!validAid) {
+      message.error('Account ID is invalid: must be a number ≥ 1');
       return;
     }
     try {
@@ -30,34 +32,35 @@ export default function Analytics() {
       const el = chartRef.current;
       if (el) {
         const ch = echarts.init(el);
-        ch.setOption({ xAxis: { type: 'category', data: d.items.map((x) => new Date(x.t * 1000).toLocaleDateString('id-ID')) },
+        ch.setOption({ xAxis: { type: 'category', data: d.items.map((x) => new Date(x.t * 1000).toLocaleDateString('en-US')) },
           yAxis: { type: 'value' }, series: [{ type: 'line', data: d.items.map((x) => x.followers) }] });
       }
-      if (!d.items.length) message.info('Belum ada snapshot — klik Snapshot now.');
+      if (!d.items.length) message.info('No snapshots yet — click Snapshot now.');
     } catch (e) { notifyError(e); }
   };
 
   return (
     <Space direction="vertical" style={{ width: '100%' }}>
-      <Card size="small" className="glass" title="Kurva follower per akun">
+      <PageHeader title="Analytics" sub="follower curves · job inspector · audit log" />
+      <Card size="small" className="glass" title="Follower curve per account">
         <Space>
-          <Input value={aid} onChange={(e) => setAid(e.target.value)} type="number" min={1} style={{ width: 120 }} aria-label="Account ID" />
-          <Button onClick={loadSeries}>Muat</Button>
+          <Input value={aid} onChange={(e) => setAid(e.target.value)} type="number" min={1} style={{ width: 120 }} aria-label="Account ID" status={aid && !validAid ? 'error' : undefined} />
+          <Button onClick={loadSeries}>Load</Button>
           <Button onClick={async () => {
-            if (!/^\d+$/.test(aid.trim()) || parseInt(aid, 10) < 1) { message.error('Account ID tidak valid: harus angka ≥ 1'); return; }
-            await api.post('/analytics/snapshot-now', { account_id: Number(aid) }); message.success('snapshot diantre');
+            if (!validAid) { message.error('Account ID is invalid: must be a number ≥ 1'); return; }
+            await api.post('/analytics/snapshot-now', { account_id: Number(aid) }); message.success('Snapshot queued');
           }}>Snapshot now</Button>
         </Space>
         <div ref={chartRef} style={{ height: 220, marginTop: 8 }} />
       </Card>
-      <Card size="small" className="glass" title={`Jobs (${jobs.length})`}>
-        <Table size="small" rowKey="id" dataSource={jobs} pagination={{ pageSize: 8 }}
-          columns={[{ title: 'ID', dataIndex: 'id' }, { title: 'Tipe', dataIndex: 'type' },
-            { title: 'Status', dataIndex: 'status', render: (s: string) => <StatusTag status={s} /> },
-            { title: 'Aksi', render: (_: unknown, r: { id: number }) => (
-              <Space><Button size="small" onClick={async () => { await api.post(`/analytics/jobs/${r.id}/retry`); load(); }}>Retry</Button>
+      <Panel title="Jobs" count={jobs.length}>
+        <Table size="small" rowKey="id" dataSource={jobs} pagination={{ pageSize: 8, showSizeChanger: false }}
+          columns={[{ title: 'ID', dataIndex: 'id', width: W.id, className: 'mono' }, { title: 'Type', dataIndex: 'type', width: W.type, ellipsis: true, className: 'mono' },
+            { title: 'Status', dataIndex: 'status', width: W.status, render: (s: string) => <StatusTag status={s} /> },
+            { title: 'Actions', width: W.actionsSm, align: 'right' as const, render: (_: unknown, r: { id: number }) => (
+              <Space size={6}><Button size="small" onClick={async () => { await api.post(`/analytics/jobs/${r.id}/retry`); load(); }}>Retry</Button>
                 <Button size="small" danger onClick={async () => { await api.post(`/analytics/jobs/${r.id}/cancel`); load(); }}>Cancel</Button></Space>) }]} />
-      </Card>
+      </Panel>
       <Card size="small" className="glass" title={`Dead letter (${dead.length})`}>
         {dead.map((d) => <Tag key={d.id} color="red">{d.id}:{d.type}</Tag>)}
       </Card>
@@ -65,10 +68,10 @@ export default function Analytics() {
         {rec.map((r) => <div key={r.name}><Tag color={r.enabled ? 'green' : 'default'}>{r.enabled ? 'on' : 'off'}</Tag> {r.name} — {r.note}
           <Button size="small" type="link" onClick={async () => { await api.post(`/analytics/recurring/${r.name}`, { enabled: !r.enabled }); load(); }}>toggle</Button></div>)}
       </Card>
-      <Card size="small" className="glass" title="Activity logs">
-        <Table size="small" rowKey="id" dataSource={logs} pagination={{ pageSize: 8 }}
-          columns={[{ title: 'ID', dataIndex: 'id' }, { title: 'Aksi', dataIndex: 'action' }, { title: 'Status', dataIndex: 'status' }, { title: 'Pesan', dataIndex: 'message' }]} />
-      </Card>
+      <Panel title="Activity log" count={logs.length}>
+        <Table size="small" rowKey="id" dataSource={logs} pagination={{ pageSize: 8, showSizeChanger: false }}
+          columns={[{ title: 'ID', dataIndex: 'id', width: W.id, className: 'mono' }, { title: 'Action', dataIndex: 'action', width: W.type, ellipsis: true, className: 'mono' }, { title: 'Status', dataIndex: 'status', width: W.status }, { title: 'Message', dataIndex: 'message', ellipsis: true }]} />
+      </Panel>
     </Space>
   );
 }

@@ -48,18 +48,34 @@ code, pre, .mono { font-family: 'Fira Code', ui-monospace, SFMono-Regular, Menlo
   box-shadow: 0 8px 32px rgba(2, 6, 23, 0.6);
 }
 
-/* Stat card: garis atas gradient */
+/* Stat card: garis aksen tunggal yang tenang (bukan rainbow) */
 .stat-card { position: relative; overflow: hidden; }
 .stat-card::before {
   content: '';
   position: absolute;
   top: 0; left: 0; right: 0;
   height: 2px;
-  background: linear-gradient(90deg, var(--live), var(--violet), var(--run));
-  opacity: 0.9;
+  background: linear-gradient(90deg, rgba(34, 211, 238, 0.7), rgba(34, 211, 238, 0));
+  opacity: 0.8;
 }
 .stat-num { font-family: 'Fira Code', monospace; font-size: 30px; font-weight: 600; line-height: 1.1; }
 .stat-label { color: #94a3b8; font-size: 12px; text-transform: uppercase; letter-spacing: 1.5px; }
+
+/* Grid stat hero: kolom SELALU sama besar */
+.hero-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+@media (max-width: 1100px) {
+  .hero-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* Form grid yang lega: label di atas, gap konsisten */
+.form-grid .ant-form-item { margin-bottom: 12px; }
+.form-grid .ant-form-item-label > label { color: #94a3b8; font-size: 12px; }
 
 /* Dot live berdenyut */
 .live-dot {
@@ -88,11 +104,52 @@ code, pre, .mono { font-family: 'Fira Code', ui-monospace, SFMono-Regular, Menlo
 .thb-feed .ev-err { color: #f87171; }
 .thb-feed .ev-info { color: #22d3ee; }
 
+/* Professional table rhythm: micro-caps headers, middle-aligned rows, calm hover */
+.pro-table .ant-table-thead > tr > th {
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 1.2px;
+  color: #94a3b8 !important;
+  font-weight: 600;
+  background: rgba(30, 41, 59, 0.6) !important;
+  border-bottom: 1px solid #1e293b !important;
+  padding: 10px 12px !important;
+  white-space: nowrap;
+}
+.pro-table .ant-table-tbody > tr > td {
+  vertical-align: middle;
+  padding: 9px 12px !important;
+  border-bottom: 1px solid rgba(30, 41, 59, 0.6) !important;
+}
+.pro-table .ant-table-tbody > tr:hover > td { background: rgba(34, 211, 238, 0.05) !important; }
+.num { font-family: 'Fira Code', monospace; text-align: right; }
+.cell-ellipsis { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
 /* Scrollbar ramping */
 ::-webkit-scrollbar { width: 10px; height: 10px; }
 ::-webkit-scrollbar-track { background: #020617; }
 ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 8px; border: 2px solid #020617; }
 ::-webkit-scrollbar-thumb:hover { background: #334155; }
+
+/* Matikan putih autofill Chrome: paksa tetap gelap + teks terang */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active,
+textarea:-webkit-autofill,
+select:-webkit-autofill {
+  -webkit-text-fill-color: #f8fafc !important;
+  -webkit-box-shadow: 0 0 0 1000px #0b1020 inset !important;
+  box-shadow: 0 0 0 1000px #0b1020 inset !important;
+  caret-color: #f8fafc !important;
+  background-color: #0b1020 !important;
+  background-clip: content-box !important;
+  transition: background-color 9999s ease-in-out 0s !important;
+}
+input:-internal-autofill-selected {
+  background-color: #0b1020 !important;
+  color: #f8fafc !important;
+}
 
 /* Fokus keyboard terlihat */
 :focus-visible { outline: 2px solid #22d3ee; outline-offset: 2px; border-radius: 6px; }
@@ -102,11 +159,11 @@ code, pre, .mono { font-family: 'Fira Code', ui-monospace, SFMono-Regular, Menlo
 .ant-menu-item { cursor: pointer; }
 .ant-table-row { cursor: default; }
 
-/* Hero gradient border */
+/* Hero gradient border — restrained single-hue fade */
 .hero {
   border: 1px solid transparent !important;
   background: linear-gradient(#0b1020, #0b1020) padding-box,
-    linear-gradient(135deg, rgba(34, 211, 238, 0.5), rgba(139, 92, 246, 0.5), rgba(22, 163, 74, 0.5)) border-box !important;
+    linear-gradient(135deg, rgba(34, 211, 238, 0.35), rgba(51, 65, 85, 0.6), rgba(22, 163, 74, 0.3)) border-box !important;
   border-radius: 16px !important;
 }
 

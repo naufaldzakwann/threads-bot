@@ -1,7 +1,8 @@
 import React from 'react';
-import { Button, Card, Form, Input, Select, Space, Table, Tag, message } from 'antd';
+import { Button, Card, Col, Form, Input, Row, Select, Space, Table, message } from 'antd';
 import { api, notifyError, unwrap } from '../api/client';
 import { accountIdRule, idListRule, parseIdList } from '../api/validators';
+import { PageHeader, Panel, StatusTag, W } from '../components/ui';
 import { useTranslation } from 'react-i18next';
 
 const REPLY_CONTROLS = ['everyone', 'accounts_you_follow', 'mentioned_only', 'parent_post_author_only', 'followers_only'];
@@ -25,31 +26,33 @@ export default function Threads() {
 
   return (
     <Space direction="vertical" style={{ width: '100%' }}>
+      <PageHeader title="Threads Posting" sub="scheduler · threadstorms · media validation" />
       <Card size="small" className="glass" title="Quick thread">
-        <Form form={form} layout="vertical" onFinish={(v) => act(() => api.post('/threads-posts/quick-thread', { account_ids: parseIdList(v.accounts || ''), text }), 'dijadwalkan')}>
-          <Form.Item name="accounts" label="Account ID (koma — cth 1,2,3)" rules={[{ required: true }, idListRule('Account ID')]}><Input placeholder="1,2,3" /></Form.Item>
-          <Input.TextArea rows={4} value={text} onChange={(e) => setText(e.target.value)} placeholder="Tulis utas ≤500 char, #tag pertama jadi topic_tag" />
-          <div>{t('editor.500', { n: text.length })} {text.length > 500 && <b style={{ color: 'red' }}>E-VALID-TEXT-LIMIT</b>} · {links}/5 link {links > 5 && <b style={{ color: 'red' }}>{t('editor.link_warn')}</b>}</div>
-          <Form.Item style={{ marginTop: 8 }}><Button type="primary" htmlType="submit" disabled={!text || text.length > 500 || links > 5}>Jadwalkan (stagger 1–8 mnt/akun)</Button></Form.Item>
+        <Form form={form} layout="vertical" onFinish={(v) => act(() => api.post('/threads-posts/quick-thread', { account_ids: parseIdList(v.accounts || ''), text }), 'Scheduled')}>
+          <Form.Item name="accounts" label="Account IDs (comma — e.g. 1,2,3)" rules={[{ required: true, message: 'At least 1 account ID is required' }, idListRule('Account IDs')]}><Input placeholder="1,2,3" /></Form.Item>
+          <Input.TextArea rows={4} value={text} onChange={(e) => setText(e.target.value)} placeholder="Write a thread ≤500 chars — the first #tag becomes the topic tag" />
+          <div>{t('editor.500', { n: text.length })} {text.length > 500 && <b style={{ color: 'red' }}>E-VALID-TEXT-LIMIT</b>} · {links}/5 links {links > 5 && <b style={{ color: 'red' }}>{t('editor.link_warn')}</b>}</div>
+          <Form.Item style={{ marginTop: 8 }}><Button type="primary" htmlType="submit" disabled={!text || text.length > 500 || links > 5}>Schedule (staggered 1–8 min/account)</Button></Form.Item>
         </Form>
       </Card>
-      <Card size="small" className="glass" title="Threadstorm (>500 char, rantai linear)">
+      <Card size="small" className="glass" title="Threadstorm (>500 chars, linear chain)">
         <Threadstorm onDone={load} />
       </Card>
-      <Card size="small" className="glass" title="Antrean 24 jam">
-        <Table size="small" rowKey="id" dataSource={queue} pagination={{ pageSize: 10 }}
-          columns={[{ title: 'Job', dataIndex: 'id' }, { title: 'Tipe', dataIndex: 'type' }, { title: 'Akun', dataIndex: 'account_id' },
-            { title: 'Status', dataIndex: 'status', render: (s: string) => <Tag>{s}</Tag> },
-            { title: 'Jadwal', dataIndex: 'scheduled_at', render: (v: number) => new Date(v * 1000).toLocaleString('id-ID') }]} />
-      </Card>
-      <Card size="small" className="glass" title="Threads terjadwal">
-        <Table size="small" rowKey="id" dataSource={list} pagination={{ pageSize: 10 }}
-          columns={[{ title: 'ID', dataIndex: 'id' }, { title: 'Akun', dataIndex: 'account_id' },
-            { title: 'Tag', dataIndex: 'topic_tag' },
-            { title: 'Status', dataIndex: 'status', render: (s: string) => <Tag color={s === 'published' ? 'green' : 'default'}>{s}</Tag> },
-            { title: 'Aksi', render: (_: unknown, r: { id: number }) => <Button size="small" danger onClick={() => act(() => api.post(`/threads-posts/${r.id}/cancel`), 'dibatalkan')}>Batal</Button> }]} />
-      </Card>
-      <Card size="small" className="glass" title="Validasi media (§9.1)">
+      <Panel title="24-hour queue" count={queue.length}>
+        <Table size="small" rowKey="id" dataSource={queue} pagination={{ pageSize: 10, showSizeChanger: false }}
+          columns={[{ title: 'Job', dataIndex: 'id', width: W.id, className: 'mono' }, { title: 'Type', dataIndex: 'type', width: W.type, className: 'mono', ellipsis: true },
+            { title: 'Account', dataIndex: 'account_id', width: W.account, align: 'center' as const, className: 'num' },
+            { title: 'Status', dataIndex: 'status', width: W.status, render: (s: string) => <StatusTag status={s} /> },
+            { title: 'Scheduled', dataIndex: 'scheduled_at', width: W.time, render: (v: number) => new Date(v * 1000).toLocaleString('en-US') }]} />
+      </Panel>
+      <Panel title="Scheduled threads" count={list.length}>
+        <Table size="small" rowKey="id" dataSource={list} pagination={{ pageSize: 10, showSizeChanger: false }}
+          columns={[{ title: 'ID', dataIndex: 'id', width: W.id, className: 'mono' }, { title: 'Account', dataIndex: 'account_id', width: W.account, align: 'center' as const, className: 'num' },
+            { title: 'Tag', dataIndex: 'topic_tag', width: W.tag, ellipsis: true, className: 'mono' },
+            { title: 'Status', dataIndex: 'status', width: W.status, render: (s: string) => <StatusTag status={s} /> },
+            { title: 'Actions', width: 120, align: 'right' as const, render: (_: unknown, r: { id: number }) => <Button size="small" danger onClick={() => act(() => api.post(`/threads-posts/${r.id}/cancel`), 'Cancelled')}>Cancel</Button> }]} />
+      </Panel>
+      <Card size="small" className="glass" title="Media validation (§9.1)">
         <MediaCheck />
       </Card>
     </Space>
@@ -62,15 +65,19 @@ function Threadstorm({ onDone }: { onDone: () => void }) {
     <Form form={f} layout="vertical" onFinish={async (v) => {
       try {
         const r = await unwrap<{ parts: number }>(api.post('/threads-posts/threadstorm', { account_id: Number(v.account_id), text: v.text, reply_control: v.reply_control || 'everyone' }));
-        message.success(`terpecah ${r.parts} segmen`); onDone(); f.resetFields();
+        message.success(`Split into ${r.parts} segments`); onDone(); f.resetFields();
       } catch (e) { notifyError(e); }
     }}>
-      <Space style={{ width: '100%' }} align="start">
-        <Form.Item name="account_id" rules={[{ required: true }, accountIdRule()]}><Input type="number" min={1} placeholder="Account ID" style={{ width: 140 }} /></Form.Item>
-        <Form.Item name="reply_control" initialValue="everyone"><Select style={{ width: 200 }} options={REPLY_CONTROLS.map((r) => ({ value: r }))} /></Form.Item>
-      </Space>
-      <Form.Item name="text" rules={[{ required: true }]}><Input.TextArea rows={4} placeholder="Teks panjang — otomatis dipecah per 500 char antar-kalimat" /></Form.Item>
-      <Button type="primary" htmlType="submit">Buat threadstorm</Button>
+      <Row gutter={[12, 0]}>
+        <Col span={8}>
+          <Form.Item name="account_id" label="Account ID" rules={[{ required: true, message: 'Account ID is required' }, accountIdRule()]}><Input type="number" min={1} placeholder="e.g. 3" /></Form.Item>
+        </Col>
+        <Col span={16}>
+          <Form.Item name="reply_control" label="Who can reply" initialValue="everyone"><Select options={REPLY_CONTROLS.map((r) => ({ value: r }))} /></Form.Item>
+        </Col>
+      </Row>
+      <Form.Item name="text" rules={[{ required: true, message: 'Text is required' }]}><Input.TextArea rows={4} placeholder="Long text — auto-split per 500 chars at sentence boundaries" /></Form.Item>
+      <Button type="primary" htmlType="submit">Create threadstorm</Button>
     </Form>
   );
 }
@@ -79,19 +86,33 @@ function MediaCheck() {
   const [f] = Form.useForm();
   const [out, setOut] = React.useState('');
   return (
-    <Form form={f} layout="inline" onFinish={async (v) => {
+    <Form form={f} layout="vertical" className="form-grid" onFinish={async (v) => {
       try {
         const r = await unwrap<{ via: string }>(api.post('/threads-posts/media/validate', { kind: v.kind, width: Number(v.width) || 0, height: Number(v.height) || 0, size_bytes: Number(v.size) || 0, duration_sec: Number(v.dur) || 0 }));
         setOut(`OK via ${r.via}`);
       } catch (e) { setOut(String(e)); }
     }}>
-      <Form.Item name="kind" initialValue="image"><Select style={{ width: 110 }} options={[{ value: 'image' }, { value: 'video' }]} /></Form.Item>
-      <Form.Item name="width"><Input placeholder="lebar px" style={{ width: 110 }} /></Form.Item>
-      <Form.Item name="height"><Input placeholder="tinggi px" style={{ width: 110 }} /></Form.Item>
-      <Form.Item name="size"><Input placeholder="byte" style={{ width: 130 }} /></Form.Item>
-      <Form.Item name="dur"><Input placeholder="detik (video)" style={{ width: 130 }} /></Form.Item>
-      <Form.Item><Button htmlType="submit">Cek</Button></Form.Item>
-      <span>{out}</span>
+      <Row gutter={[12, 0]}>
+        <Col span={4}>
+          <Form.Item name="kind" label="Kind" initialValue="image"><Select options={[{ value: 'image' }, { value: 'video' }]} /></Form.Item>
+        </Col>
+        <Col span={5}>
+          <Form.Item name="width" label="Width (px)"><Input type="number" min={0} placeholder="1080" /></Form.Item>
+        </Col>
+        <Col span={5}>
+          <Form.Item name="height" label="Height (px)"><Input type="number" min={0} placeholder="1080" /></Form.Item>
+        </Col>
+        <Col span={5}>
+          <Form.Item name="size" label="Size (bytes)"><Input type="number" min={0} placeholder="500000" /></Form.Item>
+        </Col>
+        <Col span={5}>
+          <Form.Item name="dur" label="Duration s (video)"><Input type="number" min={0} placeholder="60" /></Form.Item>
+        </Col>
+      </Row>
+      <Space>
+        <Button htmlType="submit">Check</Button>
+        <span className="mono" style={{ fontSize: 12 }}>{out}</span>
+      </Space>
     </Form>
   );
 }

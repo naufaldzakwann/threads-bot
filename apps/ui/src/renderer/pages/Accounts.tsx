@@ -1,7 +1,7 @@
 import React from 'react';
-import { Button, Form, Input, Modal, Select, Space, Table, Tag, message } from 'antd';
+import { Button, Form, Input, Modal, Select, Space, Table, message } from 'antd';
 import { api, notifyError, unwrap } from '../api/client';
-import { PageHeader, StatusTag } from '../components/ui';
+import { PageHeader, Panel, StatusTag, W } from '../components/ui';
 
 type Acc = { id: number; username: string; status: string; health_score: number; account_tier: string; account_role: string };
 
@@ -22,32 +22,35 @@ export default function Accounts() {
 
   return (
     <Space direction="vertical" style={{ width: '100%' }}>
-      <PageHeader title="Akun Threads" sub="tier brand vs buzzer · role scout vs actor" />
+      <PageHeader title="Threads Accounts" sub="brand vs buzzer tiers · scout vs actor roles" />
       <Space wrap>
-        <Button type="primary" onClick={() => setOpen(true)}>Tambah akun</Button>
-        <Button disabled={!sel.length} onClick={() => act(() => api.post('/accounts/bulk', { ids: sel, op: 'pause' }), 'dipause')}>Pause</Button>
-        <Button disabled={!sel.length} onClick={() => act(() => api.post('/accounts/bulk', { ids: sel, op: 'resume' }), 'diresume')}>Resume</Button>
-        <Button disabled={!sel.length} danger onClick={() => act(() => api.post('/accounts/bulk', { ids: sel, op: 'disable', confirm: sel.length <= 20 }), 'dinonaktifkan')}>Disable</Button>
+        <Button type="primary" onClick={() => setOpen(true)}>Add account</Button>
+        <Button disabled={!sel.length} onClick={() => act(() => api.post('/accounts/bulk', { ids: sel, op: 'pause' }), 'Paused')}>Pause</Button>
+        <Button disabled={!sel.length} onClick={() => act(() => api.post('/accounts/bulk', { ids: sel, op: 'resume' }), 'Resumed')}>Resume</Button>
+        <Button disabled={!sel.length} danger onClick={() => act(() => api.post('/accounts/bulk', { ids: sel, op: 'disable', confirm: sel.length <= 20 }), 'Disabled')}>Disable</Button>
       </Space>
-      <Table size="small" rowKey="id" dataSource={rows} rowSelection={{ selectedRowKeys: sel, onChange: (k) => setSel(k as number[]) }}
+      <Panel title="Accounts" count={rows.length}>
+      <Table size="small" rowKey="id" dataSource={rows} scroll={{ x: 1080 }} pagination={{ pageSize: 15, showSizeChanger: false }}
+        rowSelection={{ selectedRowKeys: sel, onChange: (k) => setSel(k as number[]) }}
         columns={[
-          { title: 'Username', dataIndex: 'username' },
-          { title: 'Status', dataIndex: 'status', render: (s: string) => <StatusTag status={s} /> },
-          { title: 'Health', dataIndex: 'health_score' },
-          { title: 'Tier', dataIndex: 'account_tier' },
-          { title: 'Role', dataIndex: 'account_role' },
-          { title: 'Aksi', render: (_: unknown, r: Acc) => (
-            <Space>
-              <Button size="small" onClick={() => act(() => api.post(`/accounts/${r.id}/login`), 'login diantre')}>Login</Button>
-              <Button size="small" onClick={() => act(() => api.post(`/accounts/${r.id}/resolve-checkpoint`), 'resolve diantre')}>Resolve</Button>
-              <Select size="small" value={r.status} style={{ width: 150 }} onChange={(v) => act(() => api.post(`/accounts/${r.id}/status`, { status: v }), v)}
+          { title: 'Username', dataIndex: 'username', width: 200, ellipsis: true, className: 'mono' },
+          { title: 'Status', dataIndex: 'status', width: W.status, render: (s: string) => <StatusTag status={s} /> },
+          { title: 'Health', dataIndex: 'health_score', width: W.health, align: 'center', className: 'num' },
+          { title: 'Tier', dataIndex: 'account_tier', width: W.tier, ellipsis: true, className: 'mono' },
+          { title: 'Role', dataIndex: 'account_role', width: W.role },
+          { title: 'Actions', width: 330, align: 'right' as const, render: (_: unknown, r: Acc) => (
+            <Space size={6}>
+              <Button size="small" onClick={() => act(() => api.post(`/accounts/${r.id}/login`), 'Login queued')}>Login</Button>
+              <Button size="small" onClick={() => act(() => api.post(`/accounts/${r.id}/resolve-checkpoint`), 'Resolve queued')}>Resolve</Button>
+              <Select size="small" value={r.status} style={{ width: 132 }} onChange={(v) => act(() => api.post(`/accounts/${r.id}/status`, { status: v }), v)}
                 options={['new', 'active', 'warming_up', 'checkpoint', 'restricted', 'disabled'].map((s) => ({ value: s, label: s }))} />
             </Space>) },
         ]} />
-      <Modal open={open} title="Tambah akun" onCancel={() => setOpen(false)} onOk={() => form.submit()}>
-        <Form form={form} layout="vertical" onFinish={(v) => act(() => api.post('/accounts', v), 'akun dibuat').then(() => { setOpen(false); form.resetFields(); })}>
-          <Form.Item name="username" label="Username/Handle" rules={[{ required: true }]}><Input /></Form.Item>
-          <Form.Item name="password" label="Password IG"><Input.Password /></Form.Item>
+      </Panel>
+      <Modal open={open} title="Add account" onCancel={() => setOpen(false)} onOk={() => form.submit()}>
+        <Form form={form} layout="vertical" onFinish={(v) => act(() => api.post('/accounts', v), 'Account created').then(() => { setOpen(false); form.resetFields(); })}>
+          <Form.Item name="username" label="Username / handle" rules={[{ required: true, message: 'Username is required' }]}><Input /></Form.Item>
+          <Form.Item name="password" label="Linked IG password"><Input.Password autoComplete="new-password" /></Form.Item>
           <Form.Item name="account_tier" label="Tier" initialValue="buzzer_satellite">
             <Select options={[{ value: 'brand_official' }, { value: 'buzzer_satellite' }]} /></Form.Item>
           <Form.Item name="account_role" label="Role" initialValue="actor">

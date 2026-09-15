@@ -50,7 +50,7 @@ export function notifyError(e: unknown) {
   _lastToast = now;
   const raw = String((e as Error)?.message ?? e);
   const friendly = raw.includes('Failed to fetch')
-    ? `Core tidak terjangkau di ${coreBase()} — backend mungkin restart. Mencoba sambung ulang otomatis…`
+    ? `Core is unreachable at ${coreBase()} — the backend may have restarted. Retrying automatically…`
     : raw;
   message.error({ content: friendly.length > 240 ? friendly.slice(0, 240) + '…' : friendly, key: 'thb-err', duration: 4 });
 }

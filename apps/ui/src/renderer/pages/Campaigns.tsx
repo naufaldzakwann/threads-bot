@@ -1,8 +1,8 @@
 import React from 'react';
-import { Button, Card, Form, Input, Modal, Select, Space, Table, Tag, message } from 'antd';
+import { Button, Col, Form, Input, Modal, Row, Select, Space, Table, message } from 'antd';
 import { api, notifyError, unwrap } from '../api/client';
 import { idListRule, intRule, parseIdList, threadsUrlListRule } from '../api/validators';
-import { StatusTag } from '../components/ui';
+import { PageHeader, Panel, StatusTag, W } from '../components/ui';
 
 export default function Campaigns() {
   const [rows, setRows] = React.useState<{ id: number; name: string; status: string }[]>([]);
@@ -25,39 +25,46 @@ export default function Campaigns() {
   };
   return (
     <Space direction="vertical" style={{ width: '100%' }}>
-      <Button type="primary" onClick={() => setOpen(true)}>Kampanye baru</Button>
-      <Table size="small" rowKey="id" dataSource={rows}
-        columns={[{ title: 'ID', dataIndex: 'id' }, { title: 'Nama', dataIndex: 'name' },
-          { title: 'Status', dataIndex: 'status', render: (s: string) => <StatusTag status={s} /> },
-          { title: 'Progres', render: (_: unknown, r: { id: number }) => prog[r.id] ? `${prog[r.id].done}/${prog[r.id].total} (${prog[r.id].rate})` : '-' },
-          { title: 'Aksi', render: (_: unknown, r: { id: number }) => (
-            <Space wrap>
+      <PageHeader title="Buzzer Campaigns" sub="1-click amplification · drip distribution · target-side pacing" />
+      <Button type="primary" onClick={() => setOpen(true)}>New campaign</Button>
+      <Panel title="Campaigns" count={rows.length}>
+      <Table size="small" rowKey="id" dataSource={rows} scroll={{ x: 980 }} pagination={{ pageSize: 12, showSizeChanger: false }}
+        columns={[{ title: 'ID', dataIndex: 'id', width: W.id, className: 'mono' }, { title: 'Name', dataIndex: 'name', width: 220, ellipsis: true },
+          { title: 'Status', dataIndex: 'status', width: W.status, render: (s: string) => <StatusTag status={s} /> },
+          { title: 'Progress', dataIndex: 'id', width: 150, render: (_: unknown, r: { id: number }) => prog[r.id] ? `${prog[r.id].done}/${prog[r.id].total} (${prog[r.id].rate})` : '–' },
+          { title: 'Actions', width: W.actionsLg, align: 'right' as const, render: (_: unknown, r: { id: number }) => (
+            <Space size={6} wrap>
               <Button size="small" onClick={() => showProg(r.id)}>Progress</Button>
-              <Button size="small" onClick={() => act(() => api.post(`/campaigns/${r.id}/start`), 'running')}>Start</Button>
-              <Button size="small" onClick={() => act(() => api.post(`/campaigns/${r.id}/pause`), 'dipause')}>Pause</Button>
-              <Button size="small" onClick={() => act(() => api.post(`/campaigns/${r.id}/stop`), 'distop')}>Stop</Button>
-              <Button size="small" onClick={() => act(() => api.post(`/campaigns/${r.id}/retry-failed`), 'gagal diantre ulang')}>Retry gagal</Button>
+              <Button size="small" onClick={() => act(() => api.post(`/campaigns/${r.id}/start`), 'Running')}>Start</Button>
+              <Button size="small" onClick={() => act(() => api.post(`/campaigns/${r.id}/pause`), 'Paused')}>Pause</Button>
+              <Button size="small" onClick={() => act(() => api.post(`/campaigns/${r.id}/stop`), 'Stopped')}>Stop</Button>
+              <Button size="small" onClick={() => act(() => api.post(`/campaigns/${r.id}/retry-failed`), 'Failures re-queued')}>Retry failed</Button>
             </Space>) }]} />
+      </Panel>
       {parts.length > 0 && (
-        <Card size="small" className="glass" title="Peserta (klik Progress)">
-          <Table size="small" rowKey="id" dataSource={parts} pagination={{ pageSize: 10 }}
-            columns={[{ title: 'Akun', dataIndex: 'account_id' }, { title: 'Status', dataIndex: 'status', render: (s: string) => <StatusTag status={s} /> }]} />
-        </Card>)}
-      <Modal open={open} title="Wizard kampanye (4 langkah diringkas)" onCancel={() => setOpen(false)} onOk={() => form.submit()} width={640}>
+        <Panel title="Participants" count={parts.length}>
+          <Table size="small" rowKey="id" dataSource={parts} pagination={{ pageSize: 10, showSizeChanger: false }}
+            columns={[{ title: 'Account', dataIndex: 'account_id', width: W.account, className: 'num' }, { title: 'Status', dataIndex: 'status', width: W.status, render: (s: string) => <StatusTag status={s} /> }]} />
+        </Panel>)}
+      <Modal open={open} title="Campaign wizard (condensed to 4 steps)" onCancel={() => setOpen(false)} onOk={() => form.submit()} width={640}>
         <Form form={form} layout="vertical" onFinish={(v) => act(() => api.post('/campaigns', {
           name: v.name, targets: (v.targets || '').split('\n').filter(Boolean),
           actions: (v.actions || []).map((t: string) => ({ type: t })),
           account_ids: parseIdList(v.accounts || ''),
           spread_minutes: Number(v.spread) || 180, max_target_actions_per_minute: Number(v.pacing) || 4,
-        }), 'kampanye dibuat').then(() => { setOpen(false); form.resetFields(); })}>
-          <Form.Item name="name" label="1. Nama" rules={[{ required: true }]}><Input /></Form.Item>
-          <Form.Item name="targets" label="1. Target (1–20 URL postingan Threads/baris)" rules={[{ required: true }, threadsUrlListRule(20)]}><Input.TextArea rows={2} placeholder="https://www.threads.com/@akun/post/…" /></Form.Item>
-          <Form.Item name="actions" label="2. Aksi + preset"><Select mode="multiple" options={['like', 'reply', 'repost', 'quote'].map((t) => ({ value: t }))} /></Form.Item>
-          <Form.Item name="accounts" label="3. Armada (ID akun, koma — cth 1,2,3)" rules={[idListRule('Armada')]}><Input placeholder="1,2,3" /></Form.Item>
-          <Space>
-            <Form.Item name="spread" label="4. Spread (mnt, 1–43200)" initialValue={180} rules={[intRule('Spread', 1, 43200)]}><Input type="number" min={1} /></Form.Item>
-            <Form.Item name="pacing" label="Target pacing/mnt (1–6)" initialValue={4} rules={[intRule('Pacing', 1, 6)]}><Input type="number" min={1} max={6} /></Form.Item>
-          </Space>
+        }), 'Campaign created').then(() => { setOpen(false); form.resetFields(); })}>
+          <Form.Item name="name" label="1. Name" rules={[{ required: true, message: 'Name is required' }]}><Input /></Form.Item>
+          <Form.Item name="targets" label="1. Targets (1–20 Threads post URLs per line)" rules={[{ required: true, message: 'At least 1 target is required' }, threadsUrlListRule(20)]}><Input.TextArea rows={2} placeholder="https://www.threads.com/@account/post/…" /></Form.Item>
+          <Form.Item name="actions" label="2. Actions + preset"><Select mode="multiple" options={['like', 'reply', 'repost', 'quote'].map((t) => ({ value: t }))} /></Form.Item>
+          <Form.Item name="accounts" label="3. Fleet (account IDs, comma — e.g. 1,2,3)" rules={[idListRule('Fleet')]}><Input placeholder="1,2,3" /></Form.Item>
+          <Row gutter={[12, 0]}>
+            <Col span={12}>
+              <Form.Item name="spread" label="4. Spread in minutes (1–43200)" initialValue={180} rules={[intRule('Spread', 1, 43200)]}><Input type="number" min={1} /></Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="pacing" label="Target pacing per min (1–6)" initialValue={4} rules={[intRule('Pacing', 1, 6)]}><Input type="number" min={1} max={6} /></Form.Item>
+            </Col>
+          </Row>
         </Form>
       </Modal>
     </Space>
