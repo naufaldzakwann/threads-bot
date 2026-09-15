@@ -1,2 +1,12 @@
 .DS_Store
 **/.DS_Store
+.venv/
+**/__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+apps/ui/node_modules/
+apps/ui/dist/
+apps/ui/public/connection.json
+*.log
+data/

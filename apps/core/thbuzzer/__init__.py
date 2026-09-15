@@ -1,0 +1,5 @@
+"""THBuzzer core package."""
+__version__ = "0.1.0"
+HANDSHAKE = "THBUZZER_READY"
+APP_NAME = "THBuzzer"
+GRAPH_BASE = "https://graph.threads.net/v1.0"

@@ -1,0 +1,49 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "thbuzzer-core"
+version = "0.1.0"
+description = "THBuzzer core backend — Threads Bot Desktop Multi-Akun"
+requires-python = ">=3.12"
+dependencies = [
+  "fastapi>=0.115",
+  "uvicorn[standard]>=0.30",
+  "pydantic>=2.7",
+  "pydantic-settings>=2.3",
+  "sqlalchemy[asyncio]>=2.0",
+  "greenlet>=3.0",
+  "aiosqlite>=0.20",
+  "alembic>=1.13",
+  "httpx>=0.27",
+  "openai>=1.30",
+  "pyotp>=2.9",
+  "pillow>=10.3",
+  "loguru>=0.7",
+  "psutil>=6.0",
+  "cryptography>=42.0",
+  "keyring>=25.0",
+  "python-dateutil>=2.9",
+  "tzdata>=2024.1",
+  "orjson>=3.10",
+  "websockets>=12.0",
+]
+
+[project.optional-dependencies]
+browser = ["playwright>=1.44", "patchright>=1.0; sys_platform=='win32'"]
+media = ["imageio-ffmpeg>=0.5"]
+test = ["pytest>=8.0", "pytest-asyncio>=0.23", "respx>=0.21", "ruff>=0.4", "mypy>=1.10", "anyio>=4.0"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 110
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+ignore_missing_imports = true
