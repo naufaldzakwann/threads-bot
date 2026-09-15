@@ -9,6 +9,7 @@ import socket
 import sys
 
 from fastapi import FastAPI, WebSocket
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from loguru import logger
 from sqlalchemy import text
@@ -41,9 +42,18 @@ def _write_connection_file() -> None:
 
 def create_app() -> FastAPI:
     app = FastAPI(title="THBuzzer", version=__version__)
+    # UI dev (5173) panggil core lintas-port -> izinkan origin localhost saja.
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origin_regex=r"https?://(127\.0\.0\.1|localhost)(:\d+)?",
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
     @app.middleware("http")
     async def auth_local(request, call_next):
+        if request.method == "OPTIONS":  # preflight CORS tanpa Authorization
+            return await call_next(request)
         if request.url.path in ("/healthz", "/openapi.json", "/docs"):
             return await call_next(request)
         if request.url.path == "/ws":
@@ -114,6 +124,7 @@ def main() -> None:
     ap.add_argument("--port", type=int, default=0)
     args = ap.parse_args()
     with socket.socket() as so:
+        so.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         so.bind(("127.0.0.1", args.port or 0))
         port = so.getsockname()[1]
     global CORE_PORT
